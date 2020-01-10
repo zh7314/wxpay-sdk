@@ -35,47 +35,94 @@ com.github.wxpay.sdk.WXPay类下提供了对应的方法：
 ## 示例
 配置类MyConfig:
 ```java
+package com.dlc.common.config;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
+import org.springframework.stereotype.Component;
+import org.springframework.util.ResourceUtils;
+
+import com.github.wxpay.sdk.IWXPayDomain;
 import com.github.wxpay.sdk.WXPayConfig;
-import java.io.*;
+import com.github.wxpay.sdk.WXPayConstants;
 
-public class MyConfig implements WXPayConfig{
+@Configuration
+public class MyWxPayConfig extends WXPayConfig {
 
-    private byte[] certData;
+	@Autowired
+	private Environment env;
 
-    public MyConfig() throws Exception {
-        String certPath = "/path/to/apiclient_cert.p12";
-        File file = new File(certPath);
-        InputStream certStream = new FileInputStream(file);
-        this.certData = new byte[(int) file.length()];
-        certStream.read(this.certData);
-        certStream.close();
-    }
+	private byte[] certData;
 
-    public String getAppID() {
-        return "wx8888888888888888";
-    }
+	private String appId = "";
+	private String mchId = "";
+	private String mchKey = "";
+	private String certPath = "";
 
-    public String getMchID() {
-        return "12888888";
-    }
+	@Override
+	public String getAppID() {
+//		return env.getProperty("weiXin.appid");
+		return this.appId;
+	}
 
-    public String getKey() {
-        return "88888888888888888888888888888888";
-    }
+	@Override
+	public String getMchID() {
+//		return env.getProperty("weiXin.mch-id");
+		return this.mchId;
+	}
 
-    public InputStream getCertStream() {
-        ByteArrayInputStream certBis = new ByteArrayInputStream(this.certData);
-        return certBis;
-    }
+	@Override
+	public String getKey() {
+//		return env.getProperty("weiXin.mch-key");
+		return this.mchKey;
+	}
 
-    public int getHttpConnectTimeoutMs() {
-        return 8000;
-    }
+//这里不写在构造方法是因为开发和线上的秘钥文件地址不同
+	@Override
+	public InputStream getCertStream() {
 
-    public int getHttpReadTimeoutMs() {
-        return 10000;
-    }
+		try {
+			String certPath = this.certPath;
+			File file = new File(certPath);
+			InputStream certStream = new FileInputStream(file);
+			this.certData = new byte[(int) file.length()];
+			certStream.read(this.certData);
+			certStream.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		ByteArrayInputStream certBis = new ByteArrayInputStream(this.certData);
+		return certBis;
+	}
+
+	@Override
+	public IWXPayDomain getWXPayDomain() {
+		IWXPayDomain iwxPayDomain = new IWXPayDomain() {
+			public void report(String domain, long elapsedTimeMillis, Exception ex) {
+			}
+
+			public DomainInfo getDomain(WXPayConfig config) {
+				return new IWXPayDomain.DomainInfo(WXPayConstants.DOMAIN_API, true);
+			}
+		};
+		return iwxPayDomain;
+	}
+
 }
+
 ```
 
 统一下单：
